@@ -40,29 +40,92 @@ public class SHexMachine implements IPlayer, IAuto {
     @Override
     public PlayerMove move(HexGameStatus s) {
 
-        int freeCells = 0;
-        for(int i=0;i<s.getSize();i++){
-          for(int k=0;k<s.getSize();k++){
-              if(s.getPos(i, k)==0) {
-                  freeCells++;
-              }
-            }  
-        }
+        int millorMoviment = 0;
+        nombredejugades = 0;
+        double valor = LOSS_SCORE;
+        for (int i = 0; i < tauler.getMida(); i++){
+            Tauler t = new Tauler(tauler);
+            if(t.movpossible(i)){
+                t.afegeix(i, color);
+                double candidat = MIN(t, i, -color, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
 
-        if(freeCells==0) return null;        
-        
-        Random rand = new Random();
-        int q = rand.nextInt(freeCells);
-        freeCells = 0;
-        for(  int i=0;i<s.getSize();i++){
-          for(int k=0;k<s.getSize();k++){
-              if(s.getPos(i, k)==0){
-                  if(freeCells==q) return new PlayerMove( new Point(i,k), 0L, 0, SearchType.RANDOM);
-                  freeCells++;
-              }
-            }  
+                if(valor < candidat){
+                    valor = candidat;
+                    m.addFirst(i);
+                    millorMoviment = i;
+                }
+                
+            }
+            
+        }  
+        return new PlayerMove( new Point(i,k), 0L, 0, SearchType.RANDOM);
+    }
+    
+    public double MIN(Tauler tauler, int columnaadversari, int color, int depth, double alfa, double beta){               
+        // base case1
+        //o es refereix a comprovar si es solucio o a comprovar si ja no es pot jugar mes
+        if (depth == 0){
+            nombredejugades++;
+            return heuristica(tauler, color);
         }
-        return null;        
+        
+        double valor = WIN_SCORE;
+        // base case2 - Ha guanyat algu
+        if(tauler.solucio(columnaadversari, -color)) return valor + depth;
+        
+        // general case
+        for (int i = 0; i < tauler.getMida(); i++){
+            Tauler t = new Tauler (tauler);
+            
+            if (t.movpossible(i)){
+                t.afegeix(i, color);
+                if(t.solucio(i, color)) return LOSS_SCORE;
+                                
+                valor = Math.min(valor, MAX(t, i, -color, depth-1, alfa, beta)); //he de canviar de color realment????????
+                
+                // poda alfa beta
+                if(alfabeta) {
+                    beta = Math.min(valor, beta);
+                    if(beta <= alfa)
+                        break;
+                }
+            }
+        }
+        return valor;
+    }
+    
+    private double MAX(Tauler tauler, int columnaadversari, int color, int depth, double alfa, double beta) {
+        // base case1
+        //o es refereix a comprovar si es solucio o a comprovar si ja no es pot jugar mes
+        if (depth == 0){
+            nombredejugades++;
+            return heuristica(tauler, color);
+        }
+        
+        double valor = LOSS_SCORE;
+        // base case2 - Ha guanyat algu
+        if(tauler.solucio(columnaadversari, -color)) return valor - depth;
+        
+        // general case
+        for (int i = 0; i < tauler.getMida(); i++){
+            Tauler t = new Tauler(tauler);
+            
+            if (t.movpossible(i)){
+                t.afegeix(i, color);
+                if(t.solucio(i, color)) return WIN_SCORE;
+                
+                valor = Math.max(valor, MIN(t, i, -color, depth-1, alfa, beta));
+                
+                // poda alfa beta
+                if(alfabeta) {
+                    alfa = Math.max(alfa, valor);
+                    if (beta <= alfa) 
+                        break;
+                }
+                
+            }
+        }
+        return valor;
     }
 
     /**
