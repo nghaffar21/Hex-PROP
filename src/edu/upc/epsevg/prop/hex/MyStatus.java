@@ -29,10 +29,10 @@ public class MyStatus extends HexGameStatus{
         return valor;
     }
 
-    public boolean movpossible(int i, int j) {
+    public boolean movPossible(int i, int j) {
         if (i < 0 || j < 0) return false;
         if (i > getSize() - 1 || j > getSize() - 1) return false;
-        return getPos(i, i) == 0;
+        return getPos(i, j) == 0;
     }
     
 }
