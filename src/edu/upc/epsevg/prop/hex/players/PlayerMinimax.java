@@ -16,17 +16,19 @@ import java.util.Random;
  * Jugador aleatori
  * @author Jordi i Nima
  */
-public class SHexMachine implements IPlayer, IAuto {
+public class PlayerMinimax implements IPlayer, IAuto {
     final double WIN_SCORE = Double.MAX_VALUE;
     final double LOSS_SCORE = Double.MIN_VALUE;
     boolean alfabeta = true;
     private String name;
     int profunditat_maxima;
     long[][][] zobrist = new long[11][11][3];
+    int color;
 
-    public SHexMachine(String name, int profm) {
+    public PlayerMinimax(String name, int profm) {
         this.name = name;
         this.profunditat_maxima = profm;
+        color = 0;
         for(int i =0; i<11; i++){
             for(int j = 0; j < 11; j++) {
                 for(int k = 0; k < 3; k++) {
@@ -50,30 +52,19 @@ public class SHexMachine implements IPlayer, IAuto {
      */
     @Override
     public PlayerMove move(HexGameStatus s) {
-        Point millorMoviment = new Point(0,0);
+        Point millorMoviment = null;
         double valor = Double.MAX_VALUE;
         
-        MyStatus ms = (MyStatus) s;
-        
-        int freeCells = 0;
-        for(int i=0;i<ms.getSize();i++){
-            for(int k=0;k<ms.getSize();k++){
-                if(ms.getPos(i, k)==0) {
-                    freeCells++;
-                }
-            }  
-        }
-
-        if(freeCells==0) return null;
-        
-        int color = s.getCurrentPlayerColor();
+        MyStatus ms = new MyStatus(s);
+                
+        color = s.getCurrentPlayerColor();
         
         for(int i=0;i<ms.getSize();i++){
             for(int k=0;k<ms.getSize();k++){
-                MyStatus status = new MyStatus(ms);
-                if(status.movPossible(i, k)) {
+                if(ms.movPossible(i, k)) {
+                    MyStatus status = new MyStatus(ms);
                     status.placeStone(new Point(i, k));
-                    double candidat = MIN(status, -color, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
+                    double candidat = MIN(status, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
                     
                     if(valor < candidat){
                         valor = candidat;
@@ -83,28 +74,14 @@ public class SHexMachine implements IPlayer, IAuto {
             }  
         }
         
-        /*for (int i = 0; i < s.getSize(); i++){
-            for (int j = 0; j < s.getSize(); j++) {
-                MyStatus t = new MyStatus(s);
-                if(t.movpossible(i, j)){
-                    t.placeStone(new Point(i, j));
-                    double candidat = MIN(t, i, -color, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
-                    if(valor < candidat){
-                        valor = candidat;
-                        millorMoviment = i;
-                    }
-
-                }
-            }
-        }  */
         return new PlayerMove( millorMoviment, 0L, 0, SearchType.RANDOM);
     }
     
-    public double MIN(MyStatus ms, int color, int depth, double alfa, double beta){               
+    public double MIN(MyStatus ms, int depth, double alfa, double beta){               
         // base case1
         //o es refereix a comprovar si es solucio o a comprovar si ja no es pot jugar mes
         if (depth == 0){
-            return heuristica(ms, color);
+            return heuristica(ms);
         }
         
         double valor = WIN_SCORE;
@@ -120,7 +97,7 @@ public class SHexMachine implements IPlayer, IAuto {
                     status.placeStone(new Point(i, j));
                     if(status.isGameOver()) return LOSS_SCORE;
 
-                    valor = Math.min(valor, MAX(status, -color, depth-1, alfa, beta)); //he de canviar de color realment????????
+                    valor = Math.min(valor, MAX(status, depth-1, alfa, beta)); //he de canviar de color realment????????
 
                     // poda alfa beta
                     if(alfabeta) {
@@ -135,11 +112,11 @@ public class SHexMachine implements IPlayer, IAuto {
         return valor;
     }
     
-    private double MAX(MyStatus ms, int color, int depth, double alfa, double beta) {
+    private double MAX(MyStatus ms, int depth, double alfa, double beta) {
         // base case1
         //o es refereix a comprovar si es solucio o a comprovar si ja no es pot jugar mes
         if (depth == 0){
-            return heuristica(ms, color);
+            return heuristica(ms);
         }
         
         double valor = LOSS_SCORE;
@@ -154,7 +131,7 @@ public class SHexMachine implements IPlayer, IAuto {
                     status.placeStone(new Point(i, j));
                     if(status.isGameOver()) return WIN_SCORE;
 
-                    valor = Math.max(valor, MIN(status, -color, depth-1, alfa, beta));
+                    valor = Math.max(valor, MIN(status, depth-1, alfa, beta));
 
                     // poda alfa beta
                     if(alfabeta) {
@@ -178,8 +155,23 @@ public class SHexMachine implements IPlayer, IAuto {
         return "Random(" + name + ")";
     }
 
-    private double heuristica(HexGameStatus s, int color) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    private double heuristica(HexGameStatus s) {
+        
+        
+        
+        return 0.00;
+    }
+    
+    private int[][] convertStatusToMatrix(HexGameStatus s) {
+        
+        int graph[][] = new int[s.getSize()^2][s.getSize()^2];
+    
+        for(int i=0;i<s.getSize(); i++) {
+            for(int k=0;k<s.getSize();k++) {
+                
+            }
+        }
+        return graph;
     }
 
 
