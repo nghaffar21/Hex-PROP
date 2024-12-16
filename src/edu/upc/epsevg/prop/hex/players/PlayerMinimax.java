@@ -10,6 +10,7 @@ import edu.upc.epsevg.prop.hex.SearchType;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Random;
 
 /**
@@ -17,8 +18,8 @@ import java.util.Random;
  * @author Jordi i Nima
  */
 public class PlayerMinimax implements IPlayer, IAuto {
-    final double WIN_SCORE = Double.MAX_VALUE;
-    final double LOSS_SCORE = Double.MIN_VALUE;
+    final int WIN_SCORE = Integer.MAX_VALUE;
+    final int LOSS_SCORE = Integer.MIN_VALUE;
     boolean alfabeta = true;
     private String name;
     int profunditat_maxima;
@@ -53,7 +54,7 @@ public class PlayerMinimax implements IPlayer, IAuto {
     @Override
     public PlayerMove move(HexGameStatus s) {
         Point millorMoviment = null;
-        double valor = Double.MAX_VALUE;
+        int valor = LOSS_SCORE;
         
         MyStatus ms = new MyStatus(s);
                 
@@ -64,29 +65,33 @@ public class PlayerMinimax implements IPlayer, IAuto {
                 if(ms.movPossible(i, k)) {
                     MyStatus status = new MyStatus(ms);
                     status.placeStone(new Point(i, k));
-                    double candidat = MIN(status, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
-                    
+                    int candidat = MIN(status, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
+                    System.out.println("candidat: " + candidat);
                     if(valor < candidat){
                         valor = candidat;
                         millorMoviment = new Point(i, k);
+                        System.out.println("Entra?");
                     }
                 }
             }  
         }
         
+        System.out.println("MillorMoviment: " + millorMoviment);
+        
         return new PlayerMove( millorMoviment, 0L, 0, SearchType.RANDOM);
     }
     
-    public double MIN(MyStatus ms, int depth, double alfa, double beta){               
-        // base case1
+    public int MIN(MyStatus ms, int depth, int alfa, int beta){   
+        
+        int valor = WIN_SCORE;
+        // base case1 - Ha guanyat algu
+        if(ms.isGameOver()) return valor;
+        
+        // base case2
         //o es refereix a comprovar si es solucio o a comprovar si ja no es pot jugar mes
         if (depth == 0){
             return heuristica(ms);
         }
-        
-        double valor = WIN_SCORE;
-        // base case2 - Ha guanyat algu
-        if(ms.isGameOver()) return valor + depth;
         
         // general case
         for (int i = 0; i < ms.getSize(); i++){
@@ -95,7 +100,7 @@ public class PlayerMinimax implements IPlayer, IAuto {
             
                 if (status.movPossible(i, j)){
                     status.placeStone(new Point(i, j));
-                    if(status.isGameOver()) return LOSS_SCORE;
+                    //if(status.isGameOver()) return LOSS_SCORE;
 
                     valor = Math.min(valor, MAX(status, depth-1, alfa, beta)); //he de canviar de color realment????????
 
@@ -112,16 +117,17 @@ public class PlayerMinimax implements IPlayer, IAuto {
         return valor;
     }
     
-    private double MAX(MyStatus ms, int depth, double alfa, double beta) {
-        // base case1
+    private int MAX(MyStatus ms, int depth, int alfa, int beta) {
+        
+        int valor = LOSS_SCORE;
+        // base case1 - Ha guanyat algu
+        if(ms.isGameOver()) return valor;
+        
+        // base case2
         //o es refereix a comprovar si es solucio o a comprovar si ja no es pot jugar mes
         if (depth == 0){
             return heuristica(ms);
         }
-        
-        double valor = LOSS_SCORE;
-        // base case2 - Ha guanyat algu
-        if(ms.isGameOver()) return valor - depth;
   
         // general case
         for (int i = 0; i < ms.getSize(); i++){
@@ -129,7 +135,7 @@ public class PlayerMinimax implements IPlayer, IAuto {
                 MyStatus status = new MyStatus(ms);
                 if (status.movPossible(i, j)){
                     status.placeStone(new Point(i, j));
-                    if(status.isGameOver()) return WIN_SCORE;
+                    //if(status.isGameOver()) return WIN_SCORE;
 
                     valor = Math.max(valor, MIN(status, depth-1, alfa, beta));
 
@@ -155,24 +161,145 @@ public class PlayerMinimax implements IPlayer, IAuto {
         return "Random(" + name + ")";
     }
 
-    private double heuristica(HexGameStatus s) {
-        
-        
-        
-        return 0.00;
+    /**
+     * Heuristic function using Dijkstra's shortest path to estimate who is closer to winning.
+     * The heuristic is: opponentDistance - myDistance.
+     * A positive high value means we are much closer than our opponent, which is good for us.
+     */
+    private int heuristica(HexGameStatus s) {
+        int myDist = dijkstraDistanceToWin(s, color);
+        int oppColor = (color == 1) ? -1 : 1;
+        int oppDist = dijkstraDistanceToWin(s, oppColor);
+
+        // If no path for one of them, we treat that distance as very large.
+        if (myDist < 0) myDist = LOSS_SCORE;
+        if (oppDist < 0) oppDist = WIN_SCORE;
+
+        return (oppDist - myDist);
     }
-    
-    private int[][] convertStatusToMatrix(HexGameStatus s) {
+
+    /**
+     * Compute the shortest path for a given player color from one side to the opposite side using Dijkstra.
+     * @param s Current game state.
+     * @param playerColor The color of the player (1 or 2).
+     * @return The shortest path distance. -1 if no path found.
+     */
+    private int dijkstraDistanceToWin(HexGameStatus s, int playerColor) {
+        int n = s.getSize();
+
+        // We'll create a graph implicitly. Each cell: node
+        // Player 1: connect top to bottom
+        // Player 2: connect left to right
+
+        // Create a distance array
+        int dist[][] = new int[n][n];
+        for (int i=0; i<n; i++)
+            for (int j=0; j<n; j++)
+                dist[i][j] = Integer.MAX_VALUE;
+
+        // Priority queue for Dijkstra
+        // Each entry: (distance, x, y)
+        PriorityQueue<Node> pq = new PriorityQueue<>();
         
-        int graph[][] = new int[s.getSize()^2][s.getSize()^2];
-    
-        for(int i=0;i<s.getSize(); i++) {
-            for(int k=0;k<s.getSize();k++) {
-                
+        // Initialize sources:
+        if (playerColor == -1) {
+            // Top row as sources
+            for (int x=0; x<n; x++) {
+                int cell = s.getPos(x,0);
+                if (cell == playerColor) {
+                    dist[0][x] = 0; // same color stone: cost 0
+                    pq.add(new Node(0,x,0));
+                } else if (cell == 0) {
+                    dist[0][x] = 1; // empty: cost 1
+                    pq.add(new Node(1,x,0));
+                } else {
+                    // Opponent stone: unreachable
+                }
+            }
+        } else {
+            // PlayerColor=2: left column as sources
+            for (int y=0; y<n; y++) {
+                int cell = s.getPos(0,y);
+                if (cell == playerColor) {
+                    dist[y][0] = 0;
+                    pq.add(new Node(0,0,y));
+                } else if (cell == 0) {
+                    dist[y][0] = 1;
+                    pq.add(new Node(1,0,y));
+                }
             }
         }
-        return graph;
+
+        // Directions for hex neighbors
+        // Assuming (x,y) with x as column, y as row:
+        int[][] dirs = {
+            { 1, 0}, { -1, 0},  // E, W
+            { 0, 1},  { 0, -1}, // S, N
+            { 1,-1},  {-1, 1}   // NE, SW
+        };
+
+        while(!pq.isEmpty()) {
+            Node cur = pq.poll();
+            if (cur.dist > dist[cur.y][cur.x]) continue; // outdated
+
+            // Check if we reached the opposite side
+            if (playerColor == -1) {
+                // Check bottom row
+                if (cur.y == n-1) {
+                    return cur.dist;
+                }
+            } else {
+                // Check right column
+                if (cur.x == n-1) {
+                    return cur.dist;
+                }
+            }
+
+            // Explore neighbors
+            for (int[] d : dirs) {
+                int nx = cur.x + d[0];
+                int ny = cur.y + d[1];
+                if (nx<0||nx>=n||ny<0||ny>=n) continue;
+                int cell = s.getPos(nx,ny);
+                if (cell == playerColor) {
+                    // cost 0
+                    int nd = cur.dist;
+                    if (nd < dist[nx][ny]) {
+                        dist[nx][ny] = nd;
+                        pq.add(new Node(nd, nx, ny));
+                    }
+                } else if (cell == 0) {
+                    // empty cost 1
+                    int nd = cur.dist + 1;
+                    if (nd < dist[nx][ny]) {
+                        dist[nx][ny] = nd;
+                        pq.add(new Node(nd, nx, ny));
+                    }
+                } else {
+                    // Opponent stone: blocked
+                }
+            }
+        }
+
+        // No path found
+        return -1;
     }
+
+    // Helper class for Dijkstra
+    private static class Node implements Comparable<Node> {
+        int dist, x, y;
+        Node(int dist, int x, int y) {
+            this.dist = dist;
+            this.x = x;
+            this.y = y;
+        }
+
+        @Override
+        public int compareTo(Node o) {
+            return Integer.compare(this.dist, o.dist);
+        }
+    }
+
 
 
 }
