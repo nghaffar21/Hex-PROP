@@ -206,7 +206,7 @@ public class PlayerMinimax implements IPlayer, IAuto {
                 }
             }
         } else {
-            // PlayerColor=2: left column as sources
+            // PlayerColor=1: left column as sources
             for (int y=0; y<n; y++) {
                 int cell = s.getPos(0,y);
                 if (cell == playerColor) {
@@ -228,6 +228,7 @@ public class PlayerMinimax implements IPlayer, IAuto {
         };
 
         while(!pq.isEmpty()) {
+            
             Node cur = pq.poll();
             if (cur.dist > dist[cur.y][cur.x]) continue; // outdated
 
@@ -253,21 +254,22 @@ public class PlayerMinimax implements IPlayer, IAuto {
                 if (cell == playerColor) {
                     // cost 0
                     int nd = cur.dist;
-                    if (nd < dist[nx][ny]) {
-                        dist[nx][ny] = nd;
+                    if (nd < dist[ny][nx]) {
+                        dist[ny][nx] = nd;
                         pq.add(new Node(nd, nx, ny));
                     }
                 } else if (cell == 0) {
                     // empty cost 1
                     int nd = cur.dist + 1;
-                    if (nd < dist[nx][ny]) {
-                        dist[nx][ny] = nd;
+                    if (nd < dist[ny][nx]) {
+                        dist[ny][nx] = nd;
                         pq.add(new Node(nd, nx, ny));
                     }
                 } else {
                     // Opponent stone: blocked
                 }
             }
+//            System.out.println("x: " + cur.x + "y: " + cur.y);
         }
 
         // No path found
