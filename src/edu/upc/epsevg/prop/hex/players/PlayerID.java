@@ -1,35 +1,44 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package edu.upc.epsevg.prop.hex.players;
 
 import edu.upc.epsevg.prop.hex.HexGameStatus;
 import edu.upc.epsevg.prop.hex.IAuto;
 import edu.upc.epsevg.prop.hex.IPlayer;
-import edu.upc.epsevg.prop.hex.MoveNode;
 import edu.upc.epsevg.prop.hex.MyStatus;
 import edu.upc.epsevg.prop.hex.PlayerMove;
 import edu.upc.epsevg.prop.hex.SearchType;
 import java.awt.Point;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Random;
 
 /**
- * Jugador aleatori
- * @author Jordi i Nima
+ *
+ * @author Asus
  */
-public class PlayerMinimax implements IPlayer, IAuto {
+public class PlayerID implements IPlayer, IAuto {
+    
     final int WIN_SCORE = Integer.MAX_VALUE;
     final int LOSS_SCORE = Integer.MIN_VALUE;
     boolean alfabeta = true;
     private String name;
     int profunditat_maxima;
+    long[][][] zobrist = new long[11][11][3];
     int color;
 
-    public PlayerMinimax(String name, int profm) {
+    public PlayerID(String name, int profm) {
         this.name = name;
         this.profunditat_maxima = profm;
         color = 0;
-        
+        for(int i =0; i<11; i++){
+            for(int j = 0; j < 11; j++) {
+                for(int k = 0; k < 3; k++) {
+                    zobrist[i][j][k] = new Random().nextLong();
+                }
+            }
+        }
     }
 
     @Override
@@ -50,22 +59,26 @@ public class PlayerMinimax implements IPlayer, IAuto {
         int valor = LOSS_SCORE;
         
         MyStatus ms = new MyStatus(s);
+        int depth = 0;
                 
         color = s.getCurrentPlayerColor();
-        
-        for(int i=0;i<ms.getSize();i++){
-            for(int k=0;k<ms.getSize();k++){
-                if(ms.movPossible(i, k)) {
-                    MyStatus status = new MyStatus(ms);
-                    status.placeStone(new Point(i, k));
-                    int candidat = MIN(status, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
-                    if(valor < candidat){
-                        valor = candidat;
-                        millorMoviment = new Point(i, k);
+        //while(true) {
+            
+            for(int i=0;i<ms.getSize();i++){
+                for(int k=0;k<ms.getSize();k++){
+                    if(ms.movPossible(i, k)) {
+                        MyStatus status = new MyStatus(ms);
+                        status.placeStone(new Point(i, k));
+                        int candidat = MIN(status, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
+                        if(valor < candidat){
+                            valor = candidat;
+                            millorMoviment = new Point(i, k);
+                        }
                     }
-                }
-            }  
-        }
+                }  
+            }
+            depth++;
+        //}
                 
         return new PlayerMove( millorMoviment, 0L, 0, SearchType.RANDOM);
     }
@@ -173,7 +186,7 @@ public class PlayerMinimax implements IPlayer, IAuto {
      * @param playerColor The color of the player (1 or 2).
      * @return The shortest path distance. -1 if no path found.
      */
-    public static int dijkstraDistanceToWin(HexGameStatus s, int playerColor) {
+    private int dijkstraDistanceToWin(HexGameStatus s, int playerColor) {
         int n = s.getSize();
 
         // We'll create a graph implicitly. Each cell: node
@@ -289,6 +302,5 @@ public class PlayerMinimax implements IPlayer, IAuto {
         }
     }
 
-
-
+    
 }

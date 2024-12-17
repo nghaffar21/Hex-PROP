@@ -20,13 +20,16 @@ public class MyStatus extends HexGameStatus{
         super(status);
     }
     
-    public long getHash(long[][][] zobrist, int x, int y) {
+    public long getHash(long[][][] zobrist) {
         long hash = 0;
-        
-        int valor = super.getPos(x, y);
-        hash ^= zobrist[x][y][valor+1];
+        for(int i = 0; i < getSize(); i++) {
+            for(int j = 0; j < getSize(); j++) {
+                int valor = super.getPos(i, j);
+                hash ^= zobrist[i][j][valor+1];
+            }
+        }
     
-        return valor;
+        return hash;
     }
 
     public boolean movPossible(int i, int j) {
