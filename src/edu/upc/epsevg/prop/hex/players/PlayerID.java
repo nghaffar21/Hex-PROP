@@ -24,13 +24,13 @@ public class PlayerID implements IPlayer, IAuto {
     final int LOSS_SCORE = Integer.MIN_VALUE;
     boolean alfabeta = true;
     private String name;
-    int profunditat_maxima;
     long[][][] zobrist = new long[11][11][3];
     int color;
+    long nodos_explorados;
+    boolean timedOut = false;
 
-    public PlayerID(String name, int profm) {
+    public PlayerID(String name) {
         this.name = name;
-        this.profunditat_maxima = profm;
         color = 0;
         for(int i =0; i<11; i++){
             for(int j = 0; j < 11; j++) {
@@ -44,6 +44,7 @@ public class PlayerID implements IPlayer, IAuto {
     @Override
     public void timeout() {
         // Nothing to do! I'm so fast, I never timeout 8-)
+        timedOut = true;
     }
 
     /**
@@ -55,43 +56,53 @@ public class PlayerID implements IPlayer, IAuto {
      */
     @Override
     public PlayerMove move(HexGameStatus s) {
-        Point millorMoviment = null;
+        timedOut = false;
+        nodos_explorados = 0;
+        int depth = 1;
+        PlayerMove pm = new PlayerMove( new Point(0,0), nodos_explorados, depth, SearchType.RANDOM);
+        while(!timedOut) {
+            pm = doMiniMax(s, depth);
+            depth++;
+        }
+        return pm;
+
+    }
+    
+    public PlayerMove doMiniMax(HexGameStatus s, int profunditat_maxima) { 
+        
+        Point millorMoviment = new Point(0,0);
         int valor = LOSS_SCORE;
         
         MyStatus ms = new MyStatus(s);
-        int depth = 0;
                 
         color = s.getCurrentPlayerColor();
-        //while(true) {
             
-            for(int i=0;i<ms.getSize();i++){
-                for(int k=0;k<ms.getSize();k++){
-                    if(ms.movPossible(i, k)) {
-                        MyStatus status = new MyStatus(ms);
-                        status.placeStone(new Point(i, k));
-                        int candidat = MIN(status, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
-                        if(valor < candidat){
-                            valor = candidat;
-                            millorMoviment = new Point(i, k);
-                        }
+        for(int i=0;i<ms.getSize();i++){
+            for(int k=0;k<ms.getSize();k++){
+                if(ms.movPossible(i, k)) {
+                    MyStatus status = new MyStatus(ms);
+                    status.placeStone(new Point(i, k));
+                    int candidat = MIN(status, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
+                    if(valor < candidat){
+                        valor = candidat;
+                        millorMoviment = new Point(i, k);
                     }
-                }  
-            }
-            depth++;
-        //}
-                
-        return new PlayerMove( millorMoviment, 0L, 0, SearchType.RANDOM);
+                }
+            }  
+        }
+        return new PlayerMove( millorMoviment, nodos_explorados, profunditat_maxima, SearchType.RANDOM);
     }
     
     public int MIN(MyStatus ms, int depth, int alfa, int beta){   
         
+        nodos_explorados++;
         int valor = WIN_SCORE;
         // base case1 - Ha guanyat algu
         if(ms.isGameOver()) return valor;
         
         // base case2
         //o es refereix a comprovar si es solucio o a comprovar si ja no es pot jugar mes
-        if (depth == 0){
+        if (depth == 0 || timedOut){
             return heuristica(ms);
         }
         
@@ -121,13 +132,14 @@ public class PlayerID implements IPlayer, IAuto {
     
     private int MAX(MyStatus ms, int depth, int alfa, int beta) {
         
+        nodos_explorados++;
         int valor = LOSS_SCORE;
         // base case1 - Ha guanyat algu
         if(ms.isGameOver()) return valor;
         
         // base case2
         //o es refereix a comprovar si es solucio o a comprovar si ja no es pot jugar mes
-        if (depth == 0){
+        if (depth == 0 || timedOut){
             return heuristica(ms);
         }
   
@@ -160,7 +172,7 @@ public class PlayerID implements IPlayer, IAuto {
      */
     @Override
     public String getName() {
-        return "Random(" + name + ")";
+        return name;
     }
 
     /**
