@@ -26,8 +26,9 @@ public class Game {
             @Override
             public void run() {
                 
-                IPlayer player1 = new H_E_X_Player(2/*GB*/);
-                
+                IPlayer player1 = new HumanPlayer("Humano"/*GB*/);
+                //IPlayer player1 = new H_E_X_Player(2/*GB*/);
+                //IPlayer player1 = new RandomPlayer("Random");
                 IPlayer player2 = new PlayerMinimax("PlayerMinimax", 2);
                                 
                 new Board(player1 , player2, 11 /*mida*/,  10/*s*/, false);
