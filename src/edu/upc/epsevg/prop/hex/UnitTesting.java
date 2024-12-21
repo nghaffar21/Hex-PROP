@@ -38,7 +38,7 @@ public class UnitTesting {
 
         HexGameStatus gs = new HexGameStatus(board, PlayerType.PLAYER1);        
         
-        int h = PlayerMinimax.dijkstraDistanceToWin(gs, 1);
+        int h = PlayerMinimax.dijkstraDistanceToWin(gs, -1);
         System.out.println(h);
     }
     
