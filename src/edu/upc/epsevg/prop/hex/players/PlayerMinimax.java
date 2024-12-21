@@ -24,7 +24,7 @@ public class PlayerMinimax implements IPlayer, IAuto {
     private String name;
     int profunditat_maxima;
     int color;
-
+    long nodos_explorados;
     public PlayerMinimax(String name, int profm) {
         this.name = name;
         this.profunditat_maxima = profm;
@@ -48,7 +48,7 @@ public class PlayerMinimax implements IPlayer, IAuto {
     public PlayerMove move(HexGameStatus s) {
         Point millorMoviment = null;
         int valor = LOSS_SCORE;
-        
+        nodos_explorados = 0;
         MyStatus ms = new MyStatus(s);
                 
         color = s.getCurrentPlayerColor();
@@ -67,11 +67,11 @@ public class PlayerMinimax implements IPlayer, IAuto {
             }  
         }
                 
-        return new PlayerMove( millorMoviment, 0L, 0, SearchType.RANDOM);
+        return new PlayerMove( millorMoviment, nodos_explorados, profunditat_maxima, SearchType.RANDOM);
     }
     
     public int MIN(MyStatus ms, int depth, int alfa, int beta){   
-        
+        nodos_explorados++;
         int valor = WIN_SCORE;
         // base case1 - Ha guanyat algu
         if(ms.isGameOver()) return valor;
@@ -107,7 +107,7 @@ public class PlayerMinimax implements IPlayer, IAuto {
     }
     
     private int MAX(MyStatus ms, int depth, int alfa, int beta) {
-        
+        nodos_explorados++;
         int valor = LOSS_SCORE;
         // base case1 - Ha guanyat algu
         if(ms.isGameOver()) return valor;
@@ -147,7 +147,7 @@ public class PlayerMinimax implements IPlayer, IAuto {
      */
     @Override
     public String getName() {
-        return "Random(" + name + ")";
+        return name;
     }
 
     /**
@@ -175,6 +175,7 @@ public class PlayerMinimax implements IPlayer, IAuto {
      */
     public static int dijkstraDistanceToWin(HexGameStatus s, int playerColor) {
         int n = s.getSize();
+        
 
         // We'll create a graph implicitly. Each cell: node
         // Player 1: connect top to bottom
@@ -201,8 +202,6 @@ public class PlayerMinimax implements IPlayer, IAuto {
                 } else if (cell == 0) {
                     dist[0][x] = 1; // empty: cost 1
                     pq.add(new Node(1,x,0));
-                } else {
-                    // Opponent stone: unreachable
                 }
             }
         } else {
@@ -222,9 +221,9 @@ public class PlayerMinimax implements IPlayer, IAuto {
         // Directions for hex neighbors
         // Assuming (x,y) with x as column, y as row:
         int[][] dirs = {
+            { 1,-1},  {-1, 1},   // NE, SW
             { 1, 0}, { -1, 0},  // E, W
             { 0, 1},  { 0, -1}, // S, N
-            { 1,-1},  {-1, 1}   // NE, SW
         };
 
         while(!pq.isEmpty()) {
@@ -265,8 +264,6 @@ public class PlayerMinimax implements IPlayer, IAuto {
                         dist[ny][nx] = nd;
                         pq.add(new Node(nd, nx, ny));
                     }
-                } else {
-                    // Opponent stone: blocked
                 }
             }
 //            System.out.println("x: " + cur.x + "y: " + cur.y);
