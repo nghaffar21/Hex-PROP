@@ -217,7 +217,8 @@ public class PlayerID implements IPlayer, IAuto {
      * @return The shortest path distance. -1 if no path found.
      */
     private int dijkstraDistanceToWin(HexGameStatus s, int playerColor) {
-        int n = s.getSize();
+        MyStatus ms = new MyStatus(s);
+        int n = ms.getSize();
 
         // We'll create a graph implicitly. Each cell: node
         // Player 1: connect top to bottom
@@ -237,7 +238,7 @@ public class PlayerID implements IPlayer, IAuto {
         if (playerColor == -1) {
             // Top row as sources
             for (int x=0; x<n; x++) {
-                int cell = s.getPos(x,0);
+                int cell = ms.getPos(x,0);
                 if (cell == playerColor) {
                     dist[0][x] = 0; // same color stone: cost 0
                     pq.add(new Node(0,x,0));
@@ -251,7 +252,7 @@ public class PlayerID implements IPlayer, IAuto {
         } else {
             // PlayerColor=2: left column as sources
             for (int y=0; y<n; y++) {
-                int cell = s.getPos(0,y);
+                int cell = ms.getPos(0,y);
                 if (cell == playerColor) {
                     dist[y][0] = 0;
                     pq.add(new Node(0,0,y));
@@ -262,12 +263,15 @@ public class PlayerID implements IPlayer, IAuto {
             }
         }
 
-        // Directions for hex neighbors
-        // Assuming (x,y) with x as column, y as row:
-        int[][] dirs = {
+        int[][] newDirs = {
             { 1, -2}, {-1, -1},
             {-2, 1}, {-1, 2},
             {1, 1}, {2, -1},
+        };
+  
+        // Directions for hex neighbors
+        // Assuming (x,y) with x as column, y as row:
+        int[][] dirs = {
             { 1, 0}, { -1, 0},  // E, W
             { 0, 1},  { 0, -1}, // S, N
             { 1,-1},  {-1, 1}   // NE, SW
@@ -289,13 +293,15 @@ public class PlayerID implements IPlayer, IAuto {
                     return cur.dist;
                 }
             }
-
+            
             // Explore neighbors
-            for (int[] d : dirs) {
+            for (int[] d : newDirs) {
                 int nx = cur.x + d[0];
                 int ny = cur.y + d[1];
-                if (nx<0||nx>=n||ny<0||ny>=n) continue;
-                int cell = s.getPos(nx,ny);
+                
+                if (ms.movPossible(nx, ny)) continue;
+                if (!ms.checkAdjacency(cur.x, cur.y, nx, ny)) continue;
+                int cell = ms.getPos(nx,ny);
                 if (cell == playerColor) {
                     // cost 0
                     int nd = cur.dist;
@@ -310,8 +316,29 @@ public class PlayerID implements IPlayer, IAuto {
                         dist[nx][ny] = nd;
                         pq.add(new Node(nd, nx, ny));
                     }
-                } else {
-                    // Opponent stone: blocked
+                }
+            }
+
+            // Explore neighbors
+            for (int[] d : dirs) {
+                int nx = cur.x + d[0];
+                int ny = cur.y + d[1];
+                if (ms.movPossible(nx, ny)) continue;
+                int cell = ms.getPos(nx,ny);
+                if (cell == playerColor) {
+                    // cost 0
+                    int nd = cur.dist;
+                    if (nd < dist[nx][ny]) {
+                        dist[nx][ny] = nd;
+                        pq.add(new Node(nd, nx, ny));
+                    }
+                } else if (cell == 0) {
+                    // empty cost 1
+                    int nd = cur.dist + 1;
+                    if (nd < dist[nx][ny]) {
+                        dist[nx][ny] = nd;
+                        pq.add(new Node(nd, nx, ny));
+                    }
                 }
             }
         }
