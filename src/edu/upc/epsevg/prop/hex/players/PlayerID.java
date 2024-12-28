@@ -11,6 +11,8 @@ import edu.upc.epsevg.prop.hex.MyStatus;
 import edu.upc.epsevg.prop.hex.PlayerMove;
 import edu.upc.epsevg.prop.hex.SearchType;
 import java.awt.Point;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Random;
 
@@ -24,21 +26,15 @@ public class PlayerID implements IPlayer, IAuto {
     final int LOSS_SCORE = Integer.MIN_VALUE;
     boolean alfabeta = true;
     private String name;
-    long[][][] zobrist = new long[11][11][3];
+    
     int color;
     long nodos_explorados;
     boolean timedOut = false;
+    Map<MyStatus, Point> hashMap = new HashMap<>();
 
     public PlayerID(String name) {
         this.name = name;
         color = 0;
-        for(int i =0; i<11; i++){
-            for(int j = 0; j < 11; j++) {
-                for(int k = 0; k < 3; k++) {
-                    zobrist[i][j][k] = new Random().nextLong();
-                }
-            }
-        }
     }
 
     @Override
@@ -90,6 +86,7 @@ public class PlayerID implements IPlayer, IAuto {
                 }
             }  
         }
+        hashMap.put(ms, millorMoviment);
         return new PlayerMove( millorMoviment, nodos_explorados, profunditat_maxima, SearchType.RANDOM);
     }
     
@@ -105,28 +102,38 @@ public class PlayerID implements IPlayer, IAuto {
         if (depth == 0 || timedOut){
             return heuristica(ms);
         }
-        
+        Point millorMoviment = new Point(-1,-1);
+        if(hashMap.containsKey(ms)) {
+            MyStatus status = new MyStatus(ms);
+            valor = MAX(status, depth-1, alfa, beta);
+            millorMoviment = hashMap.get(ms);
+        }
         // general case
         for (int i = 0; i < ms.getSize(); i++){
             for (int j = 0; j < ms.getSize(); j++) {
                 MyStatus status = new MyStatus(ms);
-            
-                if (status.movPossible(i, j)){
-                    status.placeStone(new Point(i, j));
-                    //if(status.isGameOver()) return LOSS_SCORE;
+                if (millorMoviment.x != i || millorMoviment.y != j) {
+                    if (status.movPossible(i, j)){
+                        status.placeStone(new Point(i, j));
+                        //if(status.isGameOver()) return LOSS_SCORE;
 
-                    valor = Math.min(valor, MAX(status, depth-1, alfa, beta)); //he de canviar de color realment????????
+                        int candidat = MAX(status, depth-1, alfa, beta);
+                        if(valor > candidat){
+                            valor = candidat;
+                            millorMoviment = new Point(i, j);
+                        }
 
-                    // poda alfa beta
-                    if(alfabeta) {
-                        beta = Math.min(valor, beta);
-                        if(beta <= alfa)
-                            break;
+                        // poda alfa beta
+                        if(alfabeta) {
+                            beta = Math.min(valor, beta);
+                            if(beta <= alfa)
+                                break;
+                        }
                     }
                 }
             }
-            
         }
+        hashMap.put(ms, millorMoviment);
         return valor;
     }
     
@@ -142,27 +149,38 @@ public class PlayerID implements IPlayer, IAuto {
         if (depth == 0 || timedOut){
             return heuristica(ms);
         }
-  
+        Point millorMoviment = new Point(-1,-1);
+        if(hashMap.containsKey(ms)) {
+            MyStatus status = new MyStatus(ms);
+            valor = MAX(status, depth-1, alfa, beta);
+            millorMoviment = hashMap.get(ms);
+        }
         // general case
         for (int i = 0; i < ms.getSize(); i++){
             for (int j = 0; j < ms.getSize(); j++) {
                 MyStatus status = new MyStatus(ms);
-                if (status.movPossible(i, j)){
-                    status.placeStone(new Point(i, j));
-                    //if(status.isGameOver()) return WIN_SCORE;
+                if (millorMoviment.x != i || millorMoviment.y != j) {
+                    if (status.movPossible(i, j)){
+                        status.placeStone(new Point(i, j));
+                        //if(status.isGameOver()) return WIN_SCORE;
 
-                    valor = Math.max(valor, MIN(status, depth-1, alfa, beta));
+                        int candidat = MIN(status, depth-1, alfa, beta);
+                        if(valor < candidat){
+                            valor = candidat;
+                            millorMoviment = new Point(i, j);
+                        }
 
-                    // poda alfa beta
-                    if(alfabeta) {
-                        alfa = Math.max(alfa, valor);
-                        if (beta <= alfa) 
-                            break;
+                        // poda alfa beta
+                        if(alfabeta) {
+                            alfa = Math.max(alfa, valor);
+                            if (beta <= alfa) 
+                                break;
+                        }
                     }
                 }
             }
-            
         }
+        hashMap.put(ms, millorMoviment);
         return valor;
     }
     
@@ -247,6 +265,9 @@ public class PlayerID implements IPlayer, IAuto {
         // Directions for hex neighbors
         // Assuming (x,y) with x as column, y as row:
         int[][] dirs = {
+            { 1, -2}, {-1, -1},
+            {-2, 1}, {-1, 2},
+            {1, 1}, {2, -1},
             { 1, 0}, { -1, 0},  // E, W
             { 0, 1},  { 0, -1}, // S, N
             { 1,-1},  {-1, 1}   // NE, SW
