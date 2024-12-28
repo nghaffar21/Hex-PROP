@@ -207,7 +207,10 @@ public class PlayerID implements IPlayer, IAuto {
         if (myDist < 0) myDist = LOSS_SCORE;
         if (oppDist < 0) oppDist = WIN_SCORE;
 
-        return (oppDist - myDist);
+        // heuristica de centre
+        int heuristica2 = heuristicaCentre(s, oppColor);
+        
+        return (oppDist - myDist) + heuristica2;
     }
 
     /**
@@ -262,16 +265,13 @@ public class PlayerID implements IPlayer, IAuto {
                 }
             }
         }
-
-        int[][] newDirs = {
-            { 1, -2}, {-1, -1},
-            {-2, 1}, {-1, 2},
-            {1, 1}, {2, -1},
-        };
   
         // Directions for hex neighbors
         // Assuming (x,y) with x as column, y as row:
         int[][] dirs = {
+            //{ 1, -2}, {-1, -1},
+            //{-2, 1}, {-1, 2},
+            //{1, 1}, {2, -1},
             { 1, 0}, { -1, 0},  // E, W
             { 0, 1},  { 0, -1}, // S, N
             { 1,-1},  {-1, 1}   // NE, SW
@@ -295,12 +295,10 @@ public class PlayerID implements IPlayer, IAuto {
             }
             
             // Explore neighbors
-            for (int[] d : newDirs) {
+            for (int[] d : dirs) {
                 int nx = cur.x + d[0];
                 int ny = cur.y + d[1];
-                
-                if (ms.movPossible(nx, ny)) continue;
-                if (!ms.checkAdjacency(cur.x, cur.y, nx, ny)) continue;
+                if (!ms.movPossible(nx, ny)) continue;
                 int cell = ms.getPos(nx,ny);
                 if (cell == playerColor) {
                     // cost 0
@@ -319,28 +317,6 @@ public class PlayerID implements IPlayer, IAuto {
                 }
             }
 
-            // Explore neighbors
-            for (int[] d : dirs) {
-                int nx = cur.x + d[0];
-                int ny = cur.y + d[1];
-                if (ms.movPossible(nx, ny)) continue;
-                int cell = ms.getPos(nx,ny);
-                if (cell == playerColor) {
-                    // cost 0
-                    int nd = cur.dist;
-                    if (nd < dist[nx][ny]) {
-                        dist[nx][ny] = nd;
-                        pq.add(new Node(nd, nx, ny));
-                    }
-                } else if (cell == 0) {
-                    // empty cost 1
-                    int nd = cur.dist + 1;
-                    if (nd < dist[nx][ny]) {
-                        dist[nx][ny] = nd;
-                        pq.add(new Node(nd, nx, ny));
-                    }
-                }
-            }
         }
 
         // No path found
@@ -360,6 +336,35 @@ public class PlayerID implements IPlayer, IAuto {
         public int compareTo(Node o) {
             return Integer.compare(this.dist, o.dist);
         }
+    }
+    
+    private int heuristicaCentre(HexGameStatus ms, int oppColor) {
+    
+        int[][] weightingTable = {
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // row 0
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // row 1
+            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 2
+            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 3
+            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 4
+            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 5 (center row)
+            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 6
+            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 7
+            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 8
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // row 9
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}  // row 10
+        };
+        
+        int heuristica = 0;
+        for (int i = 0; i < ms.getSize(); i++){
+            for (int j = 0; j < ms.getSize(); j++) {
+                if(ms.getPos(i, j) == oppColor)
+                    heuristica -= weightingTable[i][j];
+                else if(ms.getPos(i, j) == -oppColor)
+                    heuristica += weightingTable[i][j];
+                
+            }
+        }
+        return heuristica;
     }
 
     

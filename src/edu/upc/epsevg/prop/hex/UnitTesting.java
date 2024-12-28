@@ -26,7 +26,7 @@ public class UnitTesting {
         //X   0  1  2  3  4  5  6  7  8
             { 0, 0, 0, 0,  0, 0, 0, 0, 0},                     // 0   Y
               { 0, 0, 0, 0, 0, 0, 0, 0, 0},                    // 1
-                { 0, 0, 0, 0, 0, 0, 0, 0, 0},                  // 2
+                { 0, 0, 0, 0, -1, 0, 0, 0, 0},                  // 2
                   { 0, 0, 0, 0, 0, 0, 0, 0, 0},                // 3
                     { 0, 0, 0, 0,-1, 0, 0, 0, 0},              // 4
                       { 0, 0, 0,0, 0, 1, 0, 0, 0},            // 5
@@ -38,7 +38,7 @@ public class UnitTesting {
 
         HexGameStatus gs = new HexGameStatus(board, PlayerType.PLAYER1);
 
-        int h = PlayerMinimax.dijkstraDistanceToWin(gs, -1);
+        int h = PlayerMinimax.dijkstraDistanceToWin(gs, 1);
         System.out.println(h);
     }
 
