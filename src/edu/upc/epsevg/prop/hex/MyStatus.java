@@ -4,6 +4,8 @@
  */
 package edu.upc.epsevg.prop.hex;
 
+import java.awt.Point;
+
 /**
  *
  * @author keyma
@@ -37,5 +39,16 @@ public class MyStatus extends HexGameStatus{
         if (i > getSize() - 1 || j > getSize() - 1) return false;
         return getPos(i, j) == 0;
     }
+
+    @Override
+    public void placeStone(Point point) {
+        int valor=0;
+        hash ^= zobrist[i][j][valor+1];
+        super.placeStone(point); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/OverriddenMethodBody
+        valor = super.getPos(i, j);
+        hash ^= zobrist[i][j][valor+1];
+    }
+    
+    
     
 }
