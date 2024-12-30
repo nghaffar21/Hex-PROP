@@ -7,6 +7,7 @@ package edu.upc.epsevg.prop.hex;
 
 import edu.upc.epsevg.prop.hex.HexGameStatus;
 import edu.upc.epsevg.prop.hex.PlayerType;
+import edu.upc.epsevg.prop.hex.players.PlayerID;
 import edu.upc.epsevg.prop.hex.players.PlayerMinimax;
 import edu.upc.epsevg.prop.hex.players.ProfeGameStatus2;
 import edu.upc.epsevg.prop.hex.players.ProfeGameStatus3;
@@ -24,21 +25,21 @@ public class UnitTesting {
 
         byte[][] board = {
         //X   0  1  2  3  4  5  6  7  8
-            { 0, 0, 0, -1, -1, 0, 0, 0, 0},                     // 0   Y
-              { 0, 0, 0, 0, -1, 0, 0, 0, 0},                    // 1
-                { 0, 0, 0, 0, -1, 0, 0, 0, 0},                  // 2
-                  { 0, 0, 0, 1, 1, 1, 0, 0, 0},                // 3
-                    { 0, 0, 0, 0, -1 , 0, 0, 0, 0},              // 4
-                      { 0, 0, 0,0, -1, 1, 0, 0, 0},            // 5
-                        { 0, 0, 0, -1, -1, -1, 1, -1, 0},          // 6
-                          { 0, 0, 1, -1, 1, 1, -1, 1, 0},        // 7
-                            { 0, 0, 0, -1, 0, 0, -1, 0, 1}       // 8    Y
+            { -1, -1, -1, -1, 0, 0, 0, 0, 0},                     // 0   Y
+              { -1, 0, 0, 0, 0, 0, 0, 0, 0},                    // 1
+                { -1, 0, 0, 0, 0, 0, 0, 0, 0},                  // 2
+                  { 0, 0, 0, 0, 0, 0, 0, 0, 0},                // 3
+                    { -1, 0, 0, 0, 0, 0, 0, 0, 0},              // 4
+                      { 0, 0, 0,0, 0, 0, 0, 0, 0},            // 5
+                        { 0, 0, 0, 0, 0, 0, 0, 0, 0},          // 6
+                          { 0, 0, 0, 0, 0, 0, 0, 0, 0},        // 7
+                            { 0, 0, 0, 0, 0, 0, 0, 0, 0}       // 8    Y
         };
 
 
         HexGameStatus gs = new HexGameStatus(board, PlayerType.PLAYER1);
 
-        int h = PlayerMinimax.dijkstraDistanceToWin(gs, -1);
+        int h = PlayerID.dijkstraDistanceToWin(gs, -1);//PlayerMinimax.dijkstraDistanceToWin(gs, -1);
         System.out.println(h);
     }
 

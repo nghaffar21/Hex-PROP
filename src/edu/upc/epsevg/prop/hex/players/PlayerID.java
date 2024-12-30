@@ -274,20 +274,37 @@ public class PlayerID implements IPlayer, IAuto {
         if (oppDist < 0) oppDist = WIN_SCORE;
 
         // heuristica de centre
-        int heuristica2 = heuristicaCentre(s, oppColor);
+        //int heuristica2 = heuristicaCentre(s, oppColor);
         
-        int blockValue = blockingHeuristic(s, color);
-        int alpha = 1;
+        //int blockValue = blockingHeuristic(s, color);
+        //int alpha = 1;
         //if(oppDist < 4)
         //    alpha = 4;
         
-        int beta = 1;
-        if(myDist < 7)
-            beta = 0;
+        //int beta = 1;
+        //if(myDist < 7)
+          //  beta = 0;
         
         int zigzagValue = zigzagHeuristic(s);
         
-        return 2 * (oppDist - myDist) + beta * zigzagValue + alpha * blockValue; //+ 3 * heuristica2;
+        int opponentWin = 0;
+        if (oppDist <= 3) {
+            // Ejemplos: si oppDist=1 => penaliza -18000, etc.
+            opponentWin = -6000 * (4 - oppDist);
+        }
+        
+        int myWin = 0;
+        if (myDist <= 3) {
+            // Ejemplos: si oppDist=1 => penaliza -18000, etc.
+            myWin = 6000 * (4 - myDist);
+        }
+        
+        int myConnections = conectividadHeuristic(s, color);
+        int oppConnections = conectividadHeuristic(s, oppColor);
+        
+        calculateCentralControl(s, color);
+        
+        return 30 * (oppDist - myDist) + 4 * (oppConnections - myConnections) + 2 * calculateCentralControl(s, color) + opponentWin + myWin; //+ alpha * blockValue; //+ beta * zigzagValue; //+ alpha * blockValue; //+ 3 * heuristica2;
     }
 
     /**
@@ -296,9 +313,9 @@ public class PlayerID implements IPlayer, IAuto {
      * @param playerColor The color of the player (1 or 2).
      * @return The shortest path distance. -1 if no path found.
      */
-    private int dijkstraDistanceToWin(HexGameStatus s, int playerColor) {
-        MyStatus ms = new MyStatus(s);
-        int n = ms.getSize();
+    public static int dijkstraDistanceToWin(HexGameStatus s, int playerColor) {
+        int n = s.getSize();
+        
 
         // We'll create a graph implicitly. Each cell: node
         // Player 1: connect top to bottom
@@ -318,21 +335,19 @@ public class PlayerID implements IPlayer, IAuto {
         if (playerColor == -1) {
             // Top row as sources
             for (int x=0; x<n; x++) {
-                int cell = ms.getPos(x,0);
+                int cell = s.getPos(x,0);
                 if (cell == playerColor) {
                     dist[0][x] = 0; // same color stone: cost 0
                     pq.add(new Node(0,x,0));
                 } else if (cell == 0) {
                     dist[0][x] = 1; // empty: cost 1
                     pq.add(new Node(1,x,0));
-                } else {
-                    // Opponent stone: unreachable
                 }
             }
         } else {
-            // PlayerColor=2: left column as sources
+            // PlayerColor=1: left column as sources
             for (int y=0; y<n; y++) {
-                int cell = ms.getPos(0,y);
+                int cell = s.getPos(0,y);
                 if (cell == playerColor) {
                     dist[y][0] = 0;
                     pq.add(new Node(0,0,y));
@@ -342,19 +357,20 @@ public class PlayerID implements IPlayer, IAuto {
                 }
             }
         }
-  
+
         // Directions for hex neighbors
         // Assuming (x,y) with x as column, y as row:
         int[][] dirs = {
-            { 1, -2}, {-1, -1},
-            {-2, 1}, {-1, 2},
-            {1, 1}, {2, -1},
+            //{ 1, -2}, {-1, -1},
+            //{-2, 1}, {-1, 2},
+            //{1, 1}, {2, -1},
+            { 1,-1},  {-1, 1},   // NE, SW
             { 1, 0}, { -1, 0},  // E, W
-            { 0, 1},  { 0, -1}, // S, N
-            { 1,-1},  {-1, 1}   // NE, SW
+            { 0, 1},  { 0, -1} // S, N
         };
 
         while(!pq.isEmpty()) {
+            
             Node cur = pq.poll();
             if (cur.dist > dist[cur.y][cur.x]) continue; // outdated
 
@@ -370,30 +386,30 @@ public class PlayerID implements IPlayer, IAuto {
                     return cur.dist;
                 }
             }
-            
+
             // Explore neighbors
             for (int[] d : dirs) {
                 int nx = cur.x + d[0];
                 int ny = cur.y + d[1];
-                if (!ms.movPossible(nx, ny)) continue;
-                int cell = ms.getPos(nx,ny);
+                if (nx<0||nx>=n||ny<0||ny>=n) continue;
+                int cell = s.getPos(nx,ny);
                 if (cell == playerColor) {
                     // cost 0
                     int nd = cur.dist;
-                    if (nd < dist[nx][ny]) {
-                        dist[nx][ny] = nd;
+                    if (nd < dist[ny][nx]) {
+                        dist[ny][nx] = nd;
                         pq.add(new Node(nd, nx, ny));
                     }
                 } else if (cell == 0) {
                     // empty cost 1
                     int nd = cur.dist + 1;
-                    if (nd < dist[nx][ny]) {
-                        dist[nx][ny] = nd;
+                    if (nd < dist[ny][nx]) {
+                        dist[ny][nx] = nd;
                         pq.add(new Node(nd, nx, ny));
                     }
                 }
             }
-
+//            System.out.println("x: " + cur.x + "y: " + cur.y);
         }
 
         // No path found
@@ -488,11 +504,11 @@ public class PlayerID implements IPlayer, IAuto {
 
         // Standard hex adjacency for pointy-top
         int[][] dirs = {
-            { 1, -2}, //{-1, -1},
-            //{-2, 1}, 
+            { 1, -2}, {-1, -1},
+            {-2, 1}, 
             {-1, 2},
-            //{1, 1}, 
-            //{2, -1}
+            {1, 1}, 
+            {2, -1}
         };
 
         int zigzagScore = 0;
@@ -518,5 +534,44 @@ public class PlayerID implements IPlayer, IAuto {
     }
 
 
+        /**
+     * Calcula el número de conexiones entre piezas propias en el tablero.
+     * (Un conteo rápido de aristas internas en el grafo de posiciones ocupadas).
+     * 
+     * @param s Estado actual del juego.
+     * @param color Color del jugador (1 para PLAYER1, -1 para PLAYER2).
+     * @return Número de conexiones.
+     */
+    private int conectividadHeuristic(HexGameStatus s, int playerColor) {
+        int n = s.getSize();
+        int connections = 0;
+        for (int x = 0; x < n; x++) {
+            for (int y = 0; y < n; y++) {
+                if (s.getPos(x, y) == playerColor) {
+                    for (Point vecino : s.getNeigh(new Point(x, y))) {
+                        if (s.getPos(vecino.x, vecino.y) == playerColor) {
+                            connections++;
+                        }
+                    }
+                }
+            }
+        }
+        return connections / 2; // Cada arista contada 2 veces
+    }
+    
+    private int calculateCentralControl(HexGameStatus s, int playerColor) {
+        int n = s.getSize();
+        int control = 0;
+        double center = (n - 1) / 2;
+        for (int x = 0; x < n; x++) {
+            for (int y = 0; y < n; y++) {
+                if (s.getPos(x, y) == playerColor) {
+                    double dist = Math.sqrt(Math.pow(x - center, 2) + Math.pow(y - center, 2));
+                    control += (n / 2 - dist);
+                }
+            }
+        }
+        return control;
+    }
     
 }
