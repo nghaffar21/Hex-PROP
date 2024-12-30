@@ -11,6 +11,7 @@ import edu.upc.epsevg.prop.hex.MyStatus;
 import edu.upc.epsevg.prop.hex.PlayerMove;
 import edu.upc.epsevg.prop.hex.SearchType;
 import java.awt.Point;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -90,99 +91,164 @@ public class PlayerID implements IPlayer, IAuto {
         return new PlayerMove( millorMoviment, nodos_explorados, profunditat_maxima, SearchType.RANDOM);
     }
     
-    public int MIN(MyStatus ms, int depth, int alfa, int beta){   
-        
-        nodos_explorados++;
-        int valor = WIN_SCORE;
-        // base case1 - Ha guanyat algu
-        if(ms.isGameOver()) return valor;
-        
-        // base case2
-        //o es refereix a comprovar si es solucio o a comprovar si ja no es pot jugar mes
-        if (depth == 0 || timedOut){
-            return heuristica(ms);
-        }
-        Point millorMoviment = new Point(-1,-1);
-        if(hashMap.containsKey(ms)) {
-            MyStatus status = new MyStatus(ms);
-            valor = MAX(status, depth-1, alfa, beta);
-            millorMoviment = hashMap.get(ms);
-        }
-        // general case
-        for (int i = 0; i < ms.getSize(); i++){
-            for (int j = 0; j < ms.getSize(); j++) {
-                MyStatus status = new MyStatus(ms);
-                if (millorMoviment.x != i || millorMoviment.y != j) {
-                    if (status.movPossible(i, j)){
-                        status.placeStone(new Point(i, j));
-                        //if(status.isGameOver()) return LOSS_SCORE;
-
-                        int candidat = MAX(status, depth-1, alfa, beta);
-                        if(valor > candidat){
-                            valor = candidat;
-                            millorMoviment = new Point(i, j);
-                        }
-
-                        // poda alfa beta
-                        if(alfabeta) {
-                            beta = Math.min(valor, beta);
-                            if(beta <= alfa)
-                                break;
-                        }
-                    }
-                }
-            }
-        }
-        hashMap.put(ms, millorMoviment);
-        return valor;
-    }
-    
-    private int MAX(MyStatus ms, int depth, int alfa, int beta) {
-        
+    private int MAX(MyStatus ms, int depth, int alpha, int beta) {
         nodos_explorados++;
         int valor = LOSS_SCORE;
-        // base case1 - Ha guanyat algu
-        if(ms.isGameOver()) return valor;
-        
-        // base case2
-        //o es refereix a comprovar si es solucio o a comprovar si ja no es pot jugar mes
-        if (depth == 0 || timedOut){
+
+        // base-case checks
+        if (ms.isGameOver()) return valor;
+        if (depth == 0 || timedOut) {
             return heuristica(ms);
         }
+
         Point millorMoviment = new Point(-1,-1);
+        // If we have a cached move for this position, etc. (optional)
         if(hashMap.containsKey(ms)) {
             MyStatus status = new MyStatus(ms);
-            valor = MAX(status, depth-1, alfa, beta);
+            valor = MAX(status, depth-1, alpha, beta);
             millorMoviment = hashMap.get(ms);
+            //return valor;
         }
-        // general case
-        for (int i = 0; i < ms.getSize(); i++){
+
+        // ---------------------------
+        // 1) Generate all children
+        // ---------------------------
+        ArrayList<MoveCandidate> children = new ArrayList<>();
+        for (int i = 0; i < ms.getSize(); i++) {
             for (int j = 0; j < ms.getSize(); j++) {
-                MyStatus status = new MyStatus(ms);
-                if (millorMoviment.x != i || millorMoviment.y != j) {
-                    if (status.movPossible(i, j)){
-                        status.placeStone(new Point(i, j));
-                        //if(status.isGameOver()) return WIN_SCORE;
+                if (ms.movPossible(i, j)) {
+                    MyStatus child = new MyStatus(ms);
+                    child.placeStone(new Point(i, j));
 
-                        int candidat = MIN(status, depth-1, alfa, beta);
-                        if(valor < candidat){
-                            valor = candidat;
-                            millorMoviment = new Point(i, j);
-                        }
+                    // Quick "predicted" score to help ordering.
+                    // Typically just call your current 'heuristica(child)' 
+                    // or retrieve from transposition table if stored.
+                    int predictedScore = heuristica(child);
 
-                        // poda alfa beta
-                        if(alfabeta) {
-                            alfa = Math.max(alfa, valor);
-                            if (beta <= alfa) 
-                                break;
-                        }
-                    }
+                    MoveCandidate mc = new MoveCandidate(i, j, predictedScore, child);
+                    children.add(mc);
                 }
             }
         }
+
+        if (children.isEmpty()) {
+            // no moves => treat as losing or just return heuristic
+            return heuristica(ms);
+        }
+
+        // ---------------------------------
+        // 2) Sort them by predictedScore
+        //    descending => best child first
+        // ---------------------------------
+        children.sort((a, b) -> Integer.compare(b.predictedScore, a.predictedScore));
+
+        // -------------------------------------
+        // 3) Expand them in sorted order
+        // -------------------------------------
+        //Point millorMoviment = new Point(-1, -1);
+        for (MoveCandidate c : children) {
+            //if (timedOut) break;
+
+            // Evaluate
+            int candidat = MIN(c.childStatus, depth - 1, alpha, beta);
+            if (candidat > valor) {
+                valor = candidat;
+                millorMoviment = new Point(c.x, c.y);
+            }
+
+            if (alfabeta) {
+                alpha = Math.max(alpha, valor);
+                if (beta <= alpha) {
+                    break; // cutoff
+                }
+            }
+        }
+
+        // If we want to store the best move in our transposition table:
         hashMap.put(ms, millorMoviment);
+
         return valor;
     }
+
+    private int MIN(MyStatus ms, int depth, int alpha, int beta) {
+        nodos_explorados++;
+        int valor = WIN_SCORE;
+
+        // base-case checks
+        if (ms.isGameOver()) return valor;
+        if (depth == 0 || timedOut) {
+            return heuristica(ms);
+        }
+
+        Point millorMoviment = new Point(-1,-1);
+        // If we have a cached move for this position, etc. (optional)
+        if(hashMap.containsKey(ms)) {
+            MyStatus status = new MyStatus(ms);
+            valor = MAX(status, depth-1, alpha, beta);
+            millorMoviment = hashMap.get(ms);
+            //return valor;
+        }
+        
+        // Generate children
+        ArrayList<MoveCandidate> children = new ArrayList<>();
+        for (int i = 0; i < ms.getSize(); i++) {
+            for (int j = 0; j < ms.getSize(); j++) {
+                if (ms.movPossible(i, j)) {
+                    MyStatus child = new MyStatus(ms);
+                    child.placeStone(new Point(i, j));
+
+                    int predictedScore = heuristica(child);
+                    MoveCandidate mc = new MoveCandidate(i, j, predictedScore, child);
+                    children.add(mc);
+                }
+            }
+        }
+
+        if (children.isEmpty()) {
+            return heuristica(ms);
+        }
+
+        // Sort: again in descending order 
+        // (though "true" MIN might want ascending, but we'll keep it consistent)
+        children.sort((a, b) -> Integer.compare(b.predictedScore, a.predictedScore));
+
+        //Point millorMoviment = new Point(-1, -1);
+        for (MoveCandidate c : children) {
+            //if (timedOut) break;
+
+            int candidat = MAX(c.childStatus, depth - 1, alpha, beta);
+            if (candidat < valor) {
+                valor = candidat;
+                millorMoviment = new Point(c.x, c.y);
+            }
+
+            if (alfabeta) {
+                beta = Math.min(beta, valor);
+                if (beta <= alpha) {
+                    break; // cutoff
+                }
+            }
+        }
+
+        hashMap.put(ms, millorMoviment);
+
+        return valor;
+    }
+
+    // Helper class to store each child's info (move + predicted score + resulting status).
+    private static class MoveCandidate {
+        public int x, y;
+        public int predictedScore;
+        public MyStatus childStatus;
+
+        public MoveCandidate(int x, int y, int predictedScore, MyStatus childStatus) {
+            this.x = x;
+            this.y = y;
+            this.predictedScore = predictedScore;
+            this.childStatus = childStatus;
+        }
+    }
+
     
     /**
      * Ens avisa que hem de parar la cerca en curs perquè s'ha exhaurit el temps
@@ -210,7 +276,18 @@ public class PlayerID implements IPlayer, IAuto {
         // heuristica de centre
         int heuristica2 = heuristicaCentre(s, oppColor);
         
-        return (oppDist - myDist) + heuristica2;
+        int blockValue = blockingHeuristic(s, color);
+        int alpha = 1;
+        //if(oppDist < 4)
+        //    alpha = 4;
+        
+        int beta = 1;
+        if(myDist < 7)
+            beta = 0;
+        
+        int zigzagValue = zigzagHeuristic(s);
+        
+        return 2 * (oppDist - myDist) + beta * zigzagValue + alpha * blockValue; //+ 3 * heuristica2;
     }
 
     /**
@@ -269,9 +346,9 @@ public class PlayerID implements IPlayer, IAuto {
         // Directions for hex neighbors
         // Assuming (x,y) with x as column, y as row:
         int[][] dirs = {
-            //{ 1, -2}, {-1, -1},
-            //{-2, 1}, {-1, 2},
-            //{1, 1}, {2, -1},
+            { 1, -2}, {-1, -1},
+            {-2, 1}, {-1, 2},
+            {1, 1}, {2, -1},
             { 1, 0}, { -1, 0},  // E, W
             { 0, 1},  { 0, -1}, // S, N
             { 1,-1},  {-1, 1}   // NE, SW
@@ -341,31 +418,105 @@ public class PlayerID implements IPlayer, IAuto {
     private int heuristicaCentre(HexGameStatus ms, int oppColor) {
     
         int[][] weightingTable = {
-            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // row 0
-            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // row 1
-            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 2
-            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 3
-            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 4
-            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 5 (center row)
-            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 6
-            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 7
-            {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // row 8
-            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // row 9
-            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}  // row 10
+            { 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1},
+            { 1,  1,  2,  2,  2,  2,  2,  2,  2,  1,  1},
+            { 1,  2,  3,  3,  3,  3,  3,  3,  3,  2,  1},
+            { 1,  2,  3,  4,  4,  4,  4,  4,  3,  2,  1},
+            { 1,  2,  3,  4,  5,  5,  5,  4,  3,  2,  1},
+            { 1,  2,  3,  4,  5, 10,  5,  4,  3,  2,  1}, // center row
+            { 1,  2,  3,  4,  5,  5,  5,  4,  3,  2,  1},
+            { 1,  2,  3,  4,  4,  4,  4,  4,  3,  2,  1},
+            { 1,  2,  3,  3,  3,  3,  3,  3,  3,  2,  1},
+            { 1,  1,  2,  2,  2,  2,  2,  2,  2,  1,  1},
+            { 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1}
         };
         
         int heuristica = 0;
         for (int i = 0; i < ms.getSize(); i++){
             for (int j = 0; j < ms.getSize(); j++) {
-                if(ms.getPos(i, j) == oppColor)
-                    heuristica -= weightingTable[i][j];
-                else if(ms.getPos(i, j) == -oppColor)
+                //if(ms.getPos(i, j) == oppColor)
+                  //  heuristica -= weightingTable[i][j];
+                if(ms.getPos(i, j) == -oppColor)
                     heuristica += weightingTable[i][j];
                 
             }
         }
         return heuristica;
     }
+    
+        /**
+     * Measures how well I'm "blocking" the opponent by counting,
+     * for each opponent stone, how many neighbors are myColor.
+     * The more I surround the opponent, the higher the blockScore.
+     */
+    private int blockingHeuristic(HexGameStatus s, int myColor) {
+        int oppColor = -color;
+        int n = s.getSize();
+
+        // Standard hex adjacency for pointy-top
+        int[][] dirs = {
+            {+1,  0}, { -1,  0},
+            { 0, +1}, {  0, -1},
+            {+1, -1}, { -1, +1}
+        };
+
+        int blockScore = 0;
+        // For each cell that belongs to the opponent...
+        for (int y = 0; y < n; y++) {
+            for (int x = 0; x < n; x++) {
+                if (s.getPos(x, y) == oppColor) {
+                    // Count neighbors that are my stones.
+                    for (int[] d: dirs) {
+                        int nx = x + d[0];
+                        int ny = y + d[1];
+                        // Check valid bounds
+                        if (nx >= 0 && nx < n && ny >= 0 && ny < n) {
+                            if (s.getPos(nx, ny) == myColor) {
+                                blockScore++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return blockScore;
+    }
+    
+    private int zigzagHeuristic(HexGameStatus s) {
+
+        int n = s.getSize();
+
+        // Standard hex adjacency for pointy-top
+        int[][] dirs = {
+            { 1, -2}, //{-1, -1},
+            //{-2, 1}, 
+            {-1, 2},
+            //{1, 1}, 
+            //{2, -1}
+        };
+
+        int zigzagScore = 0;
+        // For each cell that belongs to the opponent...
+        for (int x = 0; x < n; x++) {
+            for (int y = 0; y < n; y++) {
+                if (s.getPos(x, y) == color) {
+                    // Count neighbors that are my stones.
+                    for (int[] d: dirs) {
+                        int nx = x + d[0];
+                        int ny = y + d[1];
+                        // Check valid bounds
+                        if (nx >= 0 && nx < n && ny >= 0 && ny < n) {
+                            if (s.getPos(nx, ny) == color) {
+                                zigzagScore++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return zigzagScore;
+    }
+
 
     
 }
