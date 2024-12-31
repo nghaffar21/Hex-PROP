@@ -23,8 +23,8 @@ import java.util.Random;
  */
 public class PlayerID implements IPlayer, IAuto {
     
-    final int WIN_SCORE = Integer.MAX_VALUE;
-    final int LOSS_SCORE = Integer.MIN_VALUE;
+    final double WIN_SCORE = Double.MAX_VALUE;
+    final double LOSS_SCORE = Double.MIN_VALUE;
     boolean alfabeta = true;
     private String name;
     
@@ -68,7 +68,7 @@ public class PlayerID implements IPlayer, IAuto {
     public PlayerMove doMiniMax(HexGameStatus s, int profunditat_maxima) { 
         
         Point millorMoviment = new Point(0,0);
-        int valor = LOSS_SCORE;
+        double valor = LOSS_SCORE;
         
         MyStatus ms = new MyStatus(s);
                 
@@ -79,7 +79,7 @@ public class PlayerID implements IPlayer, IAuto {
                 if(ms.movPossible(i, k)) {
                     MyStatus status = new MyStatus(ms);
                     status.placeStone(new Point(i, k));
-                    int candidat = MIN(status, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
+                    double candidat = MIN(status, profunditat_maxima-1, LOSS_SCORE, WIN_SCORE);
                     if(valor < candidat){
                         valor = candidat;
                         millorMoviment = new Point(i, k);
@@ -91,9 +91,9 @@ public class PlayerID implements IPlayer, IAuto {
         return new PlayerMove( millorMoviment, nodos_explorados, profunditat_maxima, SearchType.RANDOM);
     }
     
-    private int MAX(MyStatus ms, int depth, int alpha, int beta) {
+    private double MAX(MyStatus ms, int depth, double alpha, double beta) {
         nodos_explorados++;
-        int valor = LOSS_SCORE;
+        double valor = LOSS_SCORE;
 
         // base-case checks
         if (ms.isGameOver()) return valor;
@@ -123,7 +123,7 @@ public class PlayerID implements IPlayer, IAuto {
                     // Quick "predicted" score to help ordering.
                     // Typically just call your current 'heuristica(child)' 
                     // or retrieve from transposition table if stored.
-                    int predictedScore = heuristica(child);
+                    double predictedScore = heuristica(child);
 
                     MoveCandidate mc = new MoveCandidate(i, j, predictedScore, child);
                     children.add(mc);
@@ -140,7 +140,7 @@ public class PlayerID implements IPlayer, IAuto {
         // 2) Sort them by predictedScore
         //    descending => best child first
         // ---------------------------------
-        children.sort((a, b) -> Integer.compare(b.predictedScore, a.predictedScore));
+        children.sort((a, b) -> Double.compare(b.predictedScore, a.predictedScore));
 
         // -------------------------------------
         // 3) Expand them in sorted order
@@ -150,7 +150,7 @@ public class PlayerID implements IPlayer, IAuto {
             //if (timedOut) break;
 
             // Evaluate
-            int candidat = MIN(c.childStatus, depth - 1, alpha, beta);
+            double candidat = MIN(c.childStatus, depth - 1, alpha, beta);
             if (candidat > valor) {
                 valor = candidat;
                 millorMoviment = new Point(c.x, c.y);
@@ -170,9 +170,9 @@ public class PlayerID implements IPlayer, IAuto {
         return valor;
     }
 
-    private int MIN(MyStatus ms, int depth, int alpha, int beta) {
+    private double MIN(MyStatus ms, int depth, double alpha, double beta) {
         nodos_explorados++;
-        int valor = WIN_SCORE;
+        double valor = WIN_SCORE;
 
         // base-case checks
         if (ms.isGameOver()) return valor;
@@ -197,7 +197,7 @@ public class PlayerID implements IPlayer, IAuto {
                     MyStatus child = new MyStatus(ms);
                     child.placeStone(new Point(i, j));
 
-                    int predictedScore = heuristica(child);
+                    double predictedScore = heuristica(child);
                     MoveCandidate mc = new MoveCandidate(i, j, predictedScore, child);
                     children.add(mc);
                 }
@@ -210,13 +210,13 @@ public class PlayerID implements IPlayer, IAuto {
 
         // Sort: again in descending order 
         // (though "true" MIN might want ascending, but we'll keep it consistent)
-        children.sort((a, b) -> Integer.compare(b.predictedScore, a.predictedScore));
+        children.sort((a, b) -> Double.compare(b.predictedScore, a.predictedScore));
 
         //Point millorMoviment = new Point(-1, -1);
         for (MoveCandidate c : children) {
             //if (timedOut) break;
 
-            int candidat = MAX(c.childStatus, depth - 1, alpha, beta);
+            double candidat = MAX(c.childStatus, depth - 1, alpha, beta);
             if (candidat < valor) {
                 valor = candidat;
                 millorMoviment = new Point(c.x, c.y);
@@ -238,10 +238,10 @@ public class PlayerID implements IPlayer, IAuto {
     // Helper class to store each child's info (move + predicted score + resulting status).
     private static class MoveCandidate {
         public int x, y;
-        public int predictedScore;
+        public double predictedScore;
         public MyStatus childStatus;
 
-        public MoveCandidate(int x, int y, int predictedScore, MyStatus childStatus) {
+        public MoveCandidate(int x, int y, double predictedScore, MyStatus childStatus) {
             this.x = x;
             this.y = y;
             this.predictedScore = predictedScore;
@@ -264,10 +264,10 @@ public class PlayerID implements IPlayer, IAuto {
      * The heuristic is: opponentDistance - myDistance.
      * A positive high value means we are much closer than our opponent, which is good for us.
      */
-    private int heuristica(HexGameStatus s) {
-        int myDist = dijkstraDistanceToWin(s, color);
+    private double heuristica(HexGameStatus s) {
+        double myDist = dijkstraDistanceToWin(s, color);
         int oppColor = (color == 1) ? -1 : 1;
-        int oppDist = dijkstraDistanceToWin(s, oppColor);
+        double oppDist = dijkstraDistanceToWin(s, oppColor);
 
         // If no path for one of them, we treat that distance as very large.
         if (myDist < 0) myDist = LOSS_SCORE;
@@ -287,24 +287,27 @@ public class PlayerID implements IPlayer, IAuto {
         
         int zigzagValue = zigzagHeuristic(s);
         
-        int opponentWin = 0;
+        double opponentWin = 0;
         if (oppDist <= 3) {
             // Ejemplos: si oppDist=1 => penaliza -18000, etc.
             opponentWin = -6000 * (4 - oppDist);
         }
         
-        int myWin = 0;
+        double myWin = 0;
         if (myDist <= 3) {
             // Ejemplos: si oppDist=1 => penaliza -18000, etc.
             myWin = 6000 * (4 - myDist);
         }
         
-        int myConnections = conectividadHeuristic(s, color);
-        int oppConnections = conectividadHeuristic(s, oppColor);
+        double myConnections = conectividadHeuristic(s, color);
+        double oppConnections = conectividadHeuristic(s, oppColor);
         
         calculateCentralControl(s, color);
         
-        return 30 * (oppDist - myDist) + 4 * (oppConnections - myConnections) + 2 * calculateCentralControl(s, color) + opponentWin + myWin; //+ alpha * blockValue; //+ beta * zigzagValue; //+ alpha * blockValue; //+ 3 * heuristica2;
+        double myVirtualConnections = virtualConnections(s, color);
+        double oppVirtualConnections = virtualConnections(s, oppColor);
+        
+        return 3.0 * (oppDist - myDist) + 0.4 * (oppConnections - myConnections) + 0.2 * calculateCentralControl(s, color) + opponentWin + myWin; //+ alpha * blockValue; //+ beta * zigzagValue; //+ alpha * blockValue; //+ 3 * heuristica2;
     }
 
     /**
@@ -313,7 +316,7 @@ public class PlayerID implements IPlayer, IAuto {
      * @param playerColor The color of the player (1 or 2).
      * @return The shortest path distance. -1 if no path found.
      */
-    public static int dijkstraDistanceToWin(HexGameStatus s, int playerColor) {
+    public static double dijkstraDistanceToWin(HexGameStatus s, int playerColor) {
         int n = s.getSize();
         
 
@@ -572,6 +575,63 @@ public class PlayerID implements IPlayer, IAuto {
             }
         }
         return control;
+    }
+
+    /**
+     * Evaluates virtual connections for the given player.
+     * @param s Current game state.
+     * @param playerColor The color of the player.
+     * @return A score representing the strength of virtual connections.
+     */
+    private double virtualConnections(HexGameStatus s, int playerColor) {
+        MyStatus ms = new MyStatus(s);
+        int n = ms.getSize();
+        double connections = 0;
+
+        // Iterate over all cells
+        for (int x = 0; x < n; x++) {
+            for (int y = 0; y < n; y++) {
+                if (ms.getPos(x, y) == playerColor) {
+                    // Check neighbors for potential connections
+                    connections += evaluateVirtualNeighbors(ms, x, y, playerColor);
+                }
+            }
+        }
+
+        return connections;
+    }
+
+    /**
+     * Checks potential virtual connections around a cell.
+     * @param ms Current board state.
+     * @param x X-coordinate of the cell.
+     * @param y Y-coordinate of the cell.
+     * @param playerColor The color of the player.
+     * @return A score based on potential connections.
+     */
+    private double evaluateVirtualNeighbors(MyStatus ms, int x, int y, int playerColor) {
+        int[][] dirs = {
+            {+1, 0}, {-1, 0}, {0, +1}, {0, -1}, {+1, -1}, {-1, +1}
+        };
+
+        double score = 0;
+
+        for (int[] d : dirs) {
+            int nx = x + d[0];
+            int ny = y + d[1];
+            if (ms.movPossible(nx, ny) && ms.getPos(nx, ny) == 0) { // Empty cell
+                // Check if this empty cell bridges two of the player's cells
+                for (int[] d2 : dirs) {
+                    int nnx = nx + d2[0];
+                    int nny = ny + d2[1];
+                    if (ms.movPossible(nnx, nny) && ms.getPos(nnx, nny) == playerColor) {
+                        score++;
+                    }
+                }
+            }
+        }
+
+        return score;
     }
     
 }
