@@ -304,7 +304,8 @@ public class PlayerID implements IPlayer, IAuto {
         
         calculateCentralControl(s, color);
         
-        return 30 * (oppDist - myDist) + 4 * (oppConnections - myConnections) + 2 * calculateCentralControl(s, color) + opponentWin + myWin; //+ alpha * blockValue; //+ beta * zigzagValue; //+ alpha * blockValue; //+ 3 * heuristica2;
+        //+ 1 * zigzagValue
+        return 10 * (oppDist - myDist) + 4 * (oppConnections - myConnections) + 2 * calculateCentralControl(s, color) + opponentWin + myWin; //+ alpha * blockValue; //+ beta * zigzagValue; //+ alpha * blockValue; //+ 3 * heuristica2;
     }
 
     /**
